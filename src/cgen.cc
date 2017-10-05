@@ -573,25 +573,51 @@ void CgenClassTable::code_classes(CgenNode *c)
 //
 void CgenClassTable::code_main()
 {
+    using std::vector;
 	// Define a function main that has no parameters and returns an i32
+    ValuePrinter vp(*ct_stream);
 
+	string printout_format("Main_main() returned %d\n");
+	op_arr_type array_type(INT8, printout_format.length()+1);
+	const_value strConst(array_type, printout_format, false);
+	vp.init_constant(".str", strConst);
+  
+	vector<op_type> main_args_types;
+	vector<operand> main_args;
+    op_type i32_type(INT32);
+
+    vp.define(i32_type, "main", main_args);
 	// Define an entry basic block
+    vp.begin_block("entry");
 
-	// Call Main_main(). This returns int for phase 1, Object for phase 2
-
+    // Call Main_main(). This returns int for phase 1, Object for phase 2
+    operand result = vp.call(main_args_types, i32_type, "Main_main", true, main_args);
 
 #ifndef MP3
 	// Get the address of the string "Main_main() returned %d\n" using
-	// getelementptr 
+	// getelementptr
+    op_arr_type array_type2(INT8, printout_format.length()+1);
+    global_value str_ptr(array_type2, ".str");
+    operand pointer = vp.getelementptr(array_type2, str_ptr,int_value(0), int_value(0), op_type(INT8_PPTR));
 
-	// Call printf with the string address of "Main_main() returned %d\n"
-	// and the return value of Main_main() as its arguments
+    // Call printf with the string address of "Main_main() returned %d\n"
+    vector<op_type> printf_args_types;
+    printf_args_types.push_back(op_type(INT8_PPTR));
+    printf_args_types.push_back(op_type(VAR_ARG));
+
+    vector<operand> printf_args;
+    printf_args.push_back(pointer);
+    printf_args.push_back(result);
+    // and the return value of Main_main() as its arguments
+    vp.call(printf_args_types, i32_type, "printf", true, printf_args, true);
 
 	// Insert return 0
+    vp.ret(int_value(0));
 
 #else
 	// Phase 2
 #endif
+    vp.end_define();
 
 }
 
