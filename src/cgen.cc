@@ -875,7 +875,11 @@ operand plus_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "plus" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+    ValuePrinter vp(*env->cur_stream);
+
+	operand e1_code =  e1->code(env);
+	operand e2_code =  e2->code(env);
+	return vp.add(e1_code, e2_code);
 }
 
 operand sub_class::code(CgenEnvironment *env) 
@@ -883,7 +887,11 @@ operand sub_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "sub" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+    ValuePrinter vp(*env->cur_stream);
+
+	operand e1_code =  e1->code(env);
+	operand e2_code =  e2->code(env);
+    return vp.sub(e1_code, e2_code);
 }
 
 operand mul_class::code(CgenEnvironment *env) 
@@ -891,7 +899,11 @@ operand mul_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "mul" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+    ValuePrinter vp(*env->cur_stream);
+
+	operand e1_code =  e1->code(env);
+	operand e2_code =  e2->code(env);
+    return vp.mul(e1_code, e2_code);
 }
 
 operand divide_class::code(CgenEnvironment *env) 
@@ -899,7 +911,17 @@ operand divide_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "div" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+    ValuePrinter vp(*env->cur_stream);
+
+    operand dividend = e1->code(env);
+    operand divisor = e2->code(env);
+
+    label ok_label = env->new_ok_label();
+    operand cond = vp.icmp(EQ, divisor, int_value(0));
+    vp.branch_cond(cond, "abort", ok_label);
+    vp.begin_block(ok_label);
+    operand ret = vp.div(dividend, divisor);
+    return ret;
 }
 
 operand neg_class::code(CgenEnvironment *env) 
@@ -907,7 +929,10 @@ operand neg_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "neg" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+    ValuePrinter vp(*env->cur_stream);
+
+    operand e1_code = e1->code(env);
+    return vp.sub(int_value(0), e1_code);
 }
 
 operand lt_class::code(CgenEnvironment *env) 
@@ -915,15 +940,23 @@ operand lt_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "lt" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+    ValuePrinter vp(*env->cur_stream);
+
+	operand e1_code =  e1->code(env);
+	operand e2_code =  e2->code(env);
+
+	return vp.icmp(LT, e1_code, e2_code);
 }
 
-operand eq_class::code(CgenEnvironment *env) 
-{
+operand eq_class::code(CgenEnvironment *env) {
 	if (cgen_debug) std::cerr << "eq" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+	ValuePrinter vp(*env->cur_stream);
+	operand e1_code = e1->code(env);
+	operand e2_code = e2->code(env);
+
+	return vp.icmp(EQ, e1_code, e2_code);
 }
 
 operand leq_class::code(CgenEnvironment *env) 
@@ -931,7 +964,11 @@ operand leq_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "leq" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+    ValuePrinter vp(*env->cur_stream);
+	operand e1_code = e1->code(env);
+	operand e2_code = e2->code(env);
+
+	return vp.icmp(LE, e1_code, e2_code);
 }
 
 operand comp_class::code(CgenEnvironment *env) 
@@ -939,7 +976,11 @@ operand comp_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "complement" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+	ValuePrinter vp(*env->cur_stream);
+
+	operand e1_code = e1->code(env);
+
+	return vp.xor_in(e1_code, bool_value(true, true));
 }
 
 operand int_const_class::code(CgenEnvironment *env) 
@@ -958,7 +999,7 @@ operand bool_const_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "Boolean Constant" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+	return bool_value((bool)val, true);
 }
 
 operand object_class::code(CgenEnvironment *env) 
