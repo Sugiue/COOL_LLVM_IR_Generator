@@ -546,7 +546,7 @@ void CgenClassTable::code_module()
 	// This must be after code_module() since that emits constants
 	// needed by the code() method for expressions
 	CgenNode* mainNode = getMainmain(root());
-	mainNode->codeGenMainmain();
+	mainNode->codeGenMainmain(*ct_stream);
 #endif
 	code_main();
 
@@ -598,18 +598,18 @@ void CgenClassTable::code_main()
 	// getelementptr
     op_arr_type array_type2(INT8, printout_format.length()+1);
     global_value str_ptr(array_type2, ".str");
-    operand pointer = vp.getelementptr(array_type2, str_ptr,int_value(0), int_value(0), op_type(INT8_PPTR));
+    operand pointer = vp.getelementptr(array_type2, str_ptr,int_value(0), int_value(0), op_type(INT8_PTR));
 
     // Call printf with the string address of "Main_main() returned %d\n"
     vector<op_type> printf_args_types;
-    printf_args_types.push_back(op_type(INT8_PPTR));
+    printf_args_types.push_back(op_type(INT8_PTR));
     printf_args_types.push_back(op_type(VAR_ARG));
 
     vector<operand> printf_args;
     printf_args.push_back(pointer);
     printf_args.push_back(result);
     // and the return value of Main_main() as its arguments
-    vp.call(printf_args_types, i32_type, "printf", true, printf_args, true);
+    vp.call(printf_args_types, i32_type, "printf", true, printf_args);
 
 	// Insert return 0
     vp.ret(int_value(0));
@@ -693,9 +693,10 @@ void CgenNode::layout_features()
 // 
 // code-gen function main() in class Main
 //
-void CgenNode::codeGenMainmain()
+void CgenNode::codeGenMainmain(std::ostream &o)
 {
-	ValuePrinter vp;
+    using std::vector;
+	ValuePrinter vp(o);
 	// In Phase 1, this can only be class Main. Get method_class for main().
 	assert(std::string(this->name->get_string()) == std::string("Main"));
 	method_class* mainMethod = (method_class*) features->nth(features->first());
@@ -704,8 +705,8 @@ void CgenNode::codeGenMainmain()
 	// Generally what you need to do are:
 	// -- setup or create the environment, env, for translating this method
 	// -- invoke mainMethod->code(env) to translate the method
-	
-
+    CgenEnvironment * env = new CgenEnvironment(o, this);
+    mainMethod->code(env);
 }
 
 #endif
@@ -809,8 +810,20 @@ void method_class::code(CgenEnvironment *env)
 {
 	if (cgen_debug) std::cerr << "method" << endl;
 
+    //TODO: IT IS FOR MP2 ONLY, CHANGE IT TO GENERAL WAYS IN MP3
 	// ADD CODE HERE
+    ValuePrinter vp(*env->cur_stream);
+    vector<operand> method_args;
 
+    vp.define(op_type(INT32), "Main_main", method_args);
+    vp.begin_block("entry");
+    vp.ret(expr->code(env));
+
+    vp.begin_block("abort");
+    vp.call(op_type(VOID), "abort", true);
+    vp.unreachable();
+
+    vp.end_define();
 }
 
 //
@@ -934,7 +947,10 @@ operand int_const_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "Integer Constant" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+
+    //TODO: FOR MP1 NOW, CHANGE TO MP3
+
+	return const_value(INT32, token->get_string(), true);
 }
 
 operand bool_const_class::code(CgenEnvironment *env) 
