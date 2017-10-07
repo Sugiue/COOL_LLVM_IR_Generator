@@ -835,15 +835,61 @@ operand assign_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "assign" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+	ValuePrinter vp(*env->cur_stream);
+
+	operand rfh = expr->code(env);
+	operand * obj_addr = env->lookup(name);
+
+	vp.store(rfh, *obj_addr);
+
+	return rfh;
 }
 
 operand cond_class::code(CgenEnvironment *env) 
 { 
 	if (cgen_debug) std::cerr << "cond" << endl;
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
-	return operand();
+
+	ValuePrinter vp(*env->cur_stream);
+	string true_label = env->new_label("true.", true);
+	string false_label = env->new_label("false.", true);
+	string end_label = env->new_label("end.", true);
+
+	// According to cool manual, the static type of condition should be the least type C such
+	// that T <= C and F <= C. Since MP2 does not support object, C should be equal to F and T,
+	// which means T should equal to F.
+
+    if (then_exp->get_type() == NULL){
+        if (cgen_debug) std::cerr << "null" << endl;
+    }
+    operand result_addr;
+	if (then_exp->get_type() == Int){
+		assert(else_exp->get_type() == Int);
+		result_addr = vp.alloca_mem(op_type(INT32));
+		if (cgen_debug) std::cerr << "int" << endl;
+	}
+	if (then_exp->get_type() == Bool){
+		assert(else_exp->get_type() == Bool);
+		result_addr = vp.alloca_mem(op_type(INT1));
+		if (cgen_debug) std::cerr << "bool" << endl;
+	}
+	operand cond = pred->code(env);
+
+	vp.branch_cond(cond, true_label, false_label);
+
+	vp.begin_block(true_label);
+	operand then_result = then_exp->code(env);
+	vp.store(then_result, result_addr);
+	vp.branch_uncond(end_label);
+
+	vp.begin_block(false_label);
+	operand else_result = else_exp->code(env);
+	vp.store(else_result, result_addr);
+	vp.branch_uncond(end_label);
+
+	vp.begin_block(end_label);
+	operand condition_result = vp.load(result_addr.get_type().get_deref_type(), result_addr);
+
+	return condition_result;
 }
 
 operand loop_class::code(CgenEnvironment *env) 
@@ -851,7 +897,25 @@ operand loop_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "loop" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+	ValuePrinter vp(*env->cur_stream);
+
+	string loop_label = env->new_label("loop.", true);
+	string true_label = env->new_label("true.", true);
+	string false_label = env->new_label("false.", true);
+
+	//unconditional branch to loop as a basic block needs a terminator
+	vp.branch_uncond(loop_label);
+	vp.begin_block(loop_label);
+	operand cond = pred->code(env);
+	vp.branch_cond(cond, true_label, false_label);
+
+	vp.begin_block(true_label);
+	body->code(env);
+	vp.branch_uncond(loop_label);
+
+	vp.begin_block(false_label);
+
+	return int_value(0);
 } 
 
 operand block_class::code(CgenEnvironment *env) 
@@ -859,7 +923,14 @@ operand block_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "block" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+	int length = body->len();
+	operand piece;
+
+	for (int i = body->first(); body->more(i); i = body->next(i)) {
+		piece = body->nth(i)->code(env);
+	}
+
+	return piece;
 }
 
 operand let_class::code(CgenEnvironment *env) 
@@ -867,7 +938,29 @@ operand let_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "let" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+	ValuePrinter vp(*env->cur_stream);
+
+	op_type_id idf_type_id;
+	if (type_decl->equal_string(const_cast<char *>("Int"), 3)){
+		idf_type_id = INT32;
+	}
+	if (type_decl->equal_string(const_cast<char *>("Bool"), 4)){
+		idf_type_id = INT1;
+	}
+
+	op_type idf_type(idf_type_id);
+	operand idf = vp.alloca_mem(idf_type);
+	env->add_local(identifier, idf);
+
+	operand idf_init = init->code(env);
+	if (!idf_init.is_empty()){
+		vp.store(idf_init, idf);
+	}
+
+	operand ret = body->code(env);
+
+	env->kill_local();
+	return ret;
 }
 
 operand plus_class::code(CgenEnvironment *env) 
@@ -1007,7 +1100,11 @@ operand object_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "Object" << endl;
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
-	return operand();
+	ValuePrinter vp(*env->cur_stream);
+
+	operand * obj_ptr = env->lookup(name);
+	operand obj = vp.load(obj_ptr->get_type().get_deref_type(), *obj_ptr);
+	return obj;
 }
 
 operand no_expr_class::code(CgenEnvironment *env) 

@@ -14,7 +14,7 @@ else
 COOLRT  = 
 endif
 
-debug = false
+debug = true
 
 ifeq ($(debug),true)
     EXTRAFLAGS = -DDEBUG
