@@ -577,7 +577,7 @@ void CgenClassTable::code_main()
 	// Define a function main that has no parameters and returns an i32
     ValuePrinter vp(*ct_stream);
 
-	string printout_format("Main_main() returned %d\n");
+	string printout_format("Main.main() returned %d\n");
 	op_arr_type array_type(INT8, printout_format.length()+1);
 	const_value strConst(array_type, printout_format, false);
 	vp.init_constant(".str", strConst);
@@ -858,19 +858,15 @@ operand cond_class::code(CgenEnvironment *env)
 	// that T <= C and F <= C. Since MP2 does not support object, C should be equal to F and T,
 	// which means T should equal to F.
 
-    if (then_exp->get_type() == NULL){
-        if (cgen_debug) std::cerr << "null" << endl;
-    }
+    // Types of those expression seems to be figured out by semant
     operand result_addr;
 	if (then_exp->get_type() == Int){
 		assert(else_exp->get_type() == Int);
 		result_addr = vp.alloca_mem(op_type(INT32));
-		if (cgen_debug) std::cerr << "int" << endl;
 	}
 	if (then_exp->get_type() == Bool){
 		assert(else_exp->get_type() == Bool);
 		result_addr = vp.alloca_mem(op_type(INT1));
-		if (cgen_debug) std::cerr << "bool" << endl;
 	}
 	operand cond = pred->code(env);
 
@@ -950,14 +946,14 @@ operand let_class::code(CgenEnvironment *env)
 
 	op_type idf_type(idf_type_id);
 	operand idf = vp.alloca_mem(idf_type);
-	env->add_local(identifier, idf);
-
 	operand idf_init = init->code(env);
 	if (!idf_init.is_empty()){
 		vp.store(idf_init, idf);
 	}
 
-	operand ret = body->code(env);
+    env->add_local(identifier, idf);
+
+    operand ret = body->code(env);
 
 	env->kill_local();
 	return ret;
