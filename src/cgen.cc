@@ -883,6 +883,7 @@ operand cond_class::code(CgenEnvironment *env)
 	vp.branch_uncond(end_label);
 
 	vp.begin_block(end_label);
+    // load result value of the cond
 	operand condition_result = vp.load(result_addr.get_type().get_deref_type(), result_addr);
 
 	return condition_result;
@@ -899,8 +900,10 @@ operand loop_class::code(CgenEnvironment *env)
 	string true_label = env->new_label("true.", true);
 	string false_label = env->new_label("false.", true);
 
-	//unconditional branch to loop as a basic block needs a terminator
+	// unconditional branch to loop as a basic block needs a terminator
 	vp.branch_uncond(loop_label);
+
+    // begining of the loop
 	vp.begin_block(loop_label);
 	operand cond = pred->code(env);
 	vp.branch_cond(cond, true_label, false_label);
@@ -921,7 +924,7 @@ operand block_class::code(CgenEnvironment *env)
 	// MORE MEANINGFUL
 	int length = body->len();
 	operand piece;
-
+    // generate code for each piece in the block
 	for (int i = body->first(); body->more(i); i = body->next(i)) {
 		piece = body->nth(i)->code(env);
 	}
@@ -950,11 +953,11 @@ operand let_class::code(CgenEnvironment *env)
 	if (!idf_init.is_empty()){
 		vp.store(idf_init, idf);
 	}
-
+    // Add the idf into scope
     env->add_local(identifier, idf);
 
     operand ret = body->code(env);
-
+    // kill the scope when exit as let is local
 	env->kill_local();
 	return ret;
 }
