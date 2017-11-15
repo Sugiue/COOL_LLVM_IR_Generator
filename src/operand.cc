@@ -39,7 +39,11 @@ op_type::op_type(op_type_id i) : id(i){
 			name = "...";
 			break;
 		case OBJ:
+			name = "%Object";
+			break;
 		case OBJ_PTR:
+			name = "%Object*";
+			break;
 		case OBJ_PPTR:
 			break;
 		default:
@@ -96,7 +100,13 @@ op_type op_type::get_ptr_type() {
 			ptr_id = OBJ_PPTR;
 			break;
 		default:
-			assert(0 && "get_ptr_type(): Type unsupported");
+            string typeName = get_name();
+			if (typeName.at(0) == '%') {
+				return op_type(typeName.substr(1, typeName.size() - 1) + "*");
+			} else {
+				return op_type(typeName + "*");
+			}
+//			assert(0 && "get_ptr_type(): Type unsupported");
 	}
 	op_type ptr_type;
 	if (ptr_id == OBJ_PTR || ptr_id == OBJ_PPTR) {
@@ -141,7 +151,10 @@ op_type op_type::get_deref_type() {
 			deref_id = OBJ_PTR;
 			break;
 		default:
-			assert(0 && "get_deref_type(): Cannot get type after dereferencing");
+			string typeName = get_name();
+			// to get ride of %
+			return op_type(typeName.substr(1, typeName.size() - 2));
+//			assert(0 && "get_deref_type(): Cannot get type after dereferencing");
 	}
 	op_type deref_type;
 	if (deref_id == OBJ || deref_id == OBJ_PTR) {

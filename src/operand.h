@@ -38,7 +38,7 @@ class op_type {
 		void set_type(op_type t) 
 		  { id = t.get_id(); name = t.get_name(); }
 		string get_name() const { return name; }
-    string get_ptr_type_name() const { return name + "*"; }
+    	string get_ptr_type_name() const { return name + "*"; }
 		bool is_ptr() 
 		  { return (id == INT1_PTR || id == INT8_PTR || 
 		            id == INT32_PTR || id == OBJ_PTR); }
@@ -58,6 +58,8 @@ class op_type {
 		  { return id == OBJ && name.compare("%SELF_TYPE")==0; }
 		bool is_same_with(op_type t)
 		  { return name.compare(t.get_name())==0; }
+
+		bool is_empty_type() {return id == EMPTY; };
 };
 
 /* Pointer-to-array type */
@@ -94,6 +96,8 @@ class op_func_type : public op_type {
 		op_type get_ptr_type();
 		op_type get_deref_type();
 		bool is_pptr() { return false; }
+        op_type get_res_type(){ return  res;}
+        vector<op_type> get_args_type(){return args;}
 };
 
 class op_func_ptr_type : public op_type {
@@ -124,6 +128,11 @@ class operand {
 		string get_typename() const { return type.get_name(); }
 		string get_name () const { return name; }
 		bool is_empty() const { return type.get_id() == EMPTY; }
+
+		string get_pure_name()
+		{string functor_reg_name = get_name();
+		functor_reg_name = functor_reg_name.substr(1, functor_reg_name.size() - 1);
+		return functor_reg_name;}
 };
 
 class global_value : public operand {

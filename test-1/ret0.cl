@@ -1,5 +1,5 @@
 class Main {
   main(): Int {
-    0
-  };
+        let a:Int <- 1 in if a <= 2 then 1 else 3 fi
+        };
 };
