@@ -13,10 +13,11 @@
 
 // ----------------------------- END DESIGN DOCS --------------------------- //
 
+#include <unordered_map>
 #include "cool-tree.h"
 #include "symtab.h"
 #include "value_printer.h"
-
+using std::unordered_map;
 //
 // CgenClassTable represents the top level of a Cool program, which is
 // basically a list of classes.  The class table is used to look up classes
@@ -30,10 +31,10 @@ private:
 	// Class list
 	List<CgenNode> *nds;
 	List<CgenNode> *special_nds;
-	int current_tag;
-    
+	int current_tag = 1;
+
 #ifndef MP3
-	CgenNode* getMainmain(CgenNode* c);
+    CgenNode* getMainmain(CgenNode* c);
 #endif
 
 public:
@@ -144,7 +145,73 @@ public:
 
 	// ADD CODE HERE
 	string get_type_name() { return string(name->get_string()); }
+    op_type string_to_type(string typeString);
 
+
+    // These temp vtable information are used to record non-default method to make
+    // doing inherit related things easier
+    vector<op_type> temp_vtable_types;
+    vector<const_value> temp_vtable_protos;
+    vector<string> temp_vtable_return_types;
+	vector<vector<op_type>> temp_vtable_args;
+
+
+	vector<string> function_names;
+    // to record types of each entry in vtable
+    vector<op_type> vtable_types;
+    // the actual value in vtable_proto
+    vector<const_value> vtable_protos;
+
+    // types of each attributes
+	vector<op_type> attr_types;
+    vector<string> attr_names;
+
+    // record attr names and their offsets
+    unordered_map<string, int> attr_loaction;
+    int attr_number = 1;
+
+    void add_attr_loaction(string name){
+        attr_loaction[name] = attr_number;
+        attr_number++;
+    }
+
+    op_type get_attr_type(string name){
+        int index = attr_loaction[name];
+        return attr_types[index - 1];
+    }
+
+    // inherit methods and attributes from parent
+    void inherit();
+
+    // check whether a function is overrided
+    bool check_override(string name);
+
+    // record functions names and their offsets
+	unordered_map<string, int> function_loaction;
+    // begin with 4 as there are always 4 default entries in vtable
+    int function_number = 4;
+
+    // add a function name to the record
+    void add_function_loaction(string name){
+        function_loaction[name] = function_number;
+        function_number++;
+    }
+
+    // record function return types
+	unordered_map<string, string> function_rets;
+
+    // record each method types
+    vector<op_func_type> method_types;
+
+    void add_func_type(op_func_type type){
+        method_types.push_back(type);
+    }
+
+    op_func_type get_method_type(string name){
+        int index = function_loaction[name];
+        // -4 as only non default methods are recorded
+        return method_types[index - 4];
+    }
 
 private:
 	// Layout the methods and attributes for code generation
@@ -206,7 +273,12 @@ public:
 	// Must return the CgenNode for a class given the symbol of its name
 	CgenNode *type_to_class(Symbol t);
 	// ADD CODE HERE
-	
+
+	// a boolean uesd to prevent method and attributes being generated together
+	bool generating_methods;
+
+	//used to save the malloc result in new_func so that I can later index into the object and init those attributes
+	operand malloc_result;
 };
 
 // Utitlity function
@@ -216,3 +288,6 @@ operand conform(operand src, op_type dest_type, CgenEnvironment *env);
 // Retrieve the class tag from operand src. Argument is the cgen node for
 // the static class of src.
 operand get_class_tag(operand src, CgenNode *src_cls, CgenEnvironment *env);
+
+// a function to find the least common type for two type, used for cond_class
+op_type find_lesast_common_type(op_type a, op_type b);
